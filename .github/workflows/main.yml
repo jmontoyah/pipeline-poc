@@ -1,50 +1,96 @@
-# .github/workflows/main.yml
-name: poc CI/CD Pipeline
+name: poc-python
 
 on:
-  push:
-    branches: [ main ]
-
+  workflow_call:
+    inputs:
+      workdir:
+        description: "El directorio del proyecto Python"
+        default: './'
+        required: false
+        type: string
+      path-environments-variables:
+        description: "Ruta de los archivos de variables de entorno"
+        required: false
+        type: string
+      python-version:
+        default: '3.9'
+        description: "Versión de Python"
+        required: false
+        type: string
+      organization:
+        description: 'Organización en SonarCloud'
+        required: false
+        default: 'jmontoyah'
+        type: string
+      coverage-file:
+        description: 'Sobrescribir el valor predeterminado para el archivo de cobertura'
+        required: false
+        type: string
+      sonar-project-properties-file:
+        description: 'Sobrescribir el valor predeterminado para el archivo de propiedades de SonarCloud'
+        required: false
+        type: string
+      build-command:
+        default: 'pip install -r requirements.txt'
+        required: false
+        type: string
+      test-command:
+        default: 'pytest --cov'
+        required: false
+        type: string
+      filepath:
+        description: 'Ruta del archivo compilado de la aplicación'
+        required: false
+        type: string
+      severity:
+        description: 'Nivel de severidad para fallar en el análisis'
+        required: false
+        type: string
+        default: 'Critical, High, Medium'
+#evaluando con dagger
 jobs:
-  build:
-    uses: ./.github/actions/build
-    with:
-      node-version: ${{ inputs.node-version }}
-      build-command: ${{ inputs.build-command }}
-
-  test:
-    uses: ./.github/actions/test
-    with:
-      test-command: ${{ inputs.test-command }}
-
-  sonar:
-    uses: ./.github/actions/sonar
-    with:
-      organization: ${{ inputs.organization }}
-      # ... otros parámetros
-
-  deploy:
-    uses: ./.github/actions/deploy
-    with:
-      environment: ${{ inputs.environment }}
-
-
-
-
-      # .github/actions/build/action.yml
-name: Build
-inputs:
-  node-version:
-    description: 'Node.js version'
-    required: true
-  build-command:
-    description: 'Build command'
-    required: true
-
-runs:
-  using: 'composite'
-  steps:
-    - uses: actions/setup-node@v3
-      with:
-        node-version: ${{ inputs.node-version }}
-    - run: ${{ inputs.build-command }}
+  build-test-sonar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.workdir }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Instalar Dependencias
+        run: ${{ inputs.build-command }}
+      - name: Ejecutar Linter
+        run: pylint **/*.py
+      - name: Ejecutar Pruebas
+        run: |
+          ${{ inputs.test-command }}
+      - name: Acción de Sonar
+        uses: actions/checkout@v3
+        with:
+          repository: example-org/python-sonarcloud-pipeline
+          ref: 'v1.0.0'
+          token: ${{ secrets.PYTHON_GITHUB_ACCESS_TOKEN }}
+          persist-credentials: false
+          path: ./.github/actions/python-sonarcloud-pipeline
+      - name: SonarCloud Scanner
+        uses: ./.github/actions/python-sonarcloud-pipeline
+        with:
+          access-token: ${{ secrets.SONAR_CLOUD_TOKEN }}
+          project-name: ${{ github.event.repository.name }}
+          project-key: ${{ github.event.repository.name }}
+          organization: ${{ inputs.organization }}
+          current-branch: ${{ github.event.pull_request.base.ref }}
+          language: 'python'
+          coverage-file: ${{ inputs.coverage-file }}
+          sonar-project-properties-file: ${{ inputs.sonar-project-properties-file }}
+      - name: Construir
+        run: |
+          python poc.py install
+      - name: Empacar la Aplicación
+        run: python poc.py sdist
