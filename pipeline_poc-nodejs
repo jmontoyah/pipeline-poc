@@ -1,0 +1,50 @@
+# .github/workflows/main.yml
+name: poc CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    uses: ./.github/actions/build
+    with:
+      node-version: ${{ inputs.node-version }}
+      build-command: ${{ inputs.build-command }}
+
+  test:
+    uses: ./.github/actions/test
+    with:
+      test-command: ${{ inputs.test-command }}
+
+  sonar:
+    uses: ./.github/actions/sonar
+    with:
+      organization: ${{ inputs.organization }}
+      # ... otros parámetros
+
+  deploy:
+    uses: ./.github/actions/deploy
+    with:
+      environment: ${{ inputs.environment }}
+
+
+
+
+      # .github/actions/build/action.yml
+name: Build
+inputs:
+  node-version:
+    description: 'Node.js version'
+    required: true
+  build-command:
+    description: 'Build command'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v3
+      with:
+        node-version: ${{ inputs.node-version }}
+    - run: ${{ inputs.build-command }}
