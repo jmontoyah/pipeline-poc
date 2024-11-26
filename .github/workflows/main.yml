@@ -64,7 +64,7 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
       - name: Instalar Dependencias
-        run: ${{ inputs.build-command }}
+        run: ${{ inputs.build-command }} 
       - name: Ejecutar Linter
         run: pylint **/*.py
       - name: Ejecutar Pruebas
