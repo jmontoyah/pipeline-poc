@@ -85,7 +85,7 @@ jobs:
           project-name: ${{ github.event.repository.name }}
           project-key: ${{ github.event.repository.name }}
           organization: ${{ inputs.organization }}
-          current-branch: ${{ github.event.pull_request.base.ref }}
+          current-branch: ${{ github.event.pull_request.base.ref }} 
           language: 'python'
           coverage-file: ${{ inputs.coverage-file }}
           sonar-project-properties-file: ${{ inputs.sonar-project-properties-file }}
