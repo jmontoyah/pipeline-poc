@@ -3,7 +3,7 @@ package main
 import (
         "fmt"
         "os"
-        "os/exec" // Para ejecutar comandos externos
+        "os/exec" // Para ejecutar comandos externos 
 )
 
 func evaluatePipelineStep(workdir string) error {
